@@ -1,0 +1,153 @@
+---
+title: "Untitled"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+Sys.getenv("RSTUDIO_PANDOC")
+```
+
+
+2.)
+
+
+```{r}
+setwd("~/Desktop")
+data <- read.csv(file = "bea-2006 (1).csv", header = TRUE)
+
+x <- log(data[[3]])
+y <- data[[2]]
+
+model <- lm(formula = y ~ x, data=data)
+summary(model)
+model_summ <- summary(model)
+mse <- mean(model_summ$residuals^2)
+mse
+condvar <- mean(residuals)^2
+condvar
+```
+
+
+
+2c.) Pittsburgh has a population of 2361000, and a per capita GMP of 38350. For model prediction see below:
+
+```{r}
+
+y <- log(2361000)*4449.8 - 23306.2
+y
+
+residual <- 38350 - y
+
+residual
+
+```
+
+Predicted value is 41992.82, and the residual is -3642.816
+
+```{r}
+setwd("~/Desktop")
+data <- read.csv(file = "bea-2006 (1).csv", header = TRUE)
+
+x <- log(data[[3]])
+y <- data[[2]]
+
+model <- lm(formula = y ~ x, data=data)
+
+residuals <- resid(model)
+
+plot(y, residuals)
+abline(0,0)
+
+```
+
+
+If the assumptions of a simple linear model were to hold, there should be no pattern to the residual plot. Here there appears to be a linear pattern to the residual plot, suggesting that a linear model does not hold.
+
+
+2e.)
+Estimated Slope
+```{r}
+slope <- 4449.8
+error <- 390.9
+l <- slope - 1.645*error
+h <- slope + 1.645*error
+l
+h
+
+
+
+```
+
+
+
+Estimated slope interpretation: For 2 values whose log populations happen to differ by 1, the expected difference in GMP is 4449.8.
+
+
+
+3.) 
+
+```{r}
+setwd("~/Desktop")
+data <- read.table(file = "bp.txt", header = TRUE)
+
+data
+
+
+plot(x = data[[1]], y = data[[2]])
+model <- lm(formula = data[[2]] ~ data[[1]], data = data)
+summary(model)
+
+abline(model, color="blue", lwd=3)
+
+```
+
+Estimate for person who is 200 pounds:
+
+```{r}
+estimate <- 200*.41942 + 69.10437
+estimate
+
+```
+
+Confidence interval:
+```{r}
+l <- 152.9884 - 1.96*sqrt(var(data[[2]]))
+l
+h <- 152.9884 + 1.96*sqrt(var(data[[2]]))
+h
+```
+
+
+The 95% C.I is 126.6859, 179.2909
+
+Interpretation: The best linear model prediction for the blood pressure of a person that weighs 200 pounds is 152.9984. We are 95% sure that a person that weighs 200 pounds would have a true mean blood pressure in the range 126.6859, 179.2909.
+
+
+3b.) New person 145 pounds. The estimated blood pressure and C.I:
+
+```{r}
+guess <- 145*.41942 + 69.10437
+guess
+l <- guess - 1.96*sqrt(var(data[[2]]))
+l
+h <- guess + 1.96*sqrt(var(data[[2]]))
+h
+```
+
+
+Estimate: 129.9203
+C.I.: 103.6178, 156.2227
+
+
+
+
+
+

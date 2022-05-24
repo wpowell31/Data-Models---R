@@ -1,0 +1,88 @@
+---
+title: "401 HW 6"
+output: html_document
+---
+1.) 
+
+```{r}
+setwd("~/Desktop")
+data <- read.table(file = "senic.txt", header = TRUE)
+
+
+
+model <- lm(data[[2]] ~ data[[4]] + data[[3]] + log(data[[7]]) + data[[9]])
+plot(data$LengthOfStay,model$residuals); abline(h=0)
+
+ qqnorm(model$residuals); qqline(model$residuals)
+```
+
+
+The diagnostic plots look slightly suspicious for violations of Gaussian properties, as there seems to be a positive correlation on the residual plot and some deviation on the qq plot.
+
+
+2a.)
+``` {r}
+model2 <- lm(data[[2]] ~ data[[4]] + data[[3]] + log(data[[7]]) + data[[9]])
+confint(model2)
+
+
+```
+
+2b.)
+``` {r}
+
+a <- data[[9]]
+for ( itr in 1:113 ){
+  if(data[itr, 9] >1){
+    a[itr] = 0
+  }
+}
+
+b <- data[[9]]
+for ( itr in 1:113 ){
+  if(data[itr, 9] <2){
+    b[itr] = 0
+  }
+}
+
+model3 <- lm(data[[2]] ~ data[[4]] + data[[3]] + log(data[[7]]) + data[[8]] + a*b)
+summary(model3)
+confint(model3)
+
+```
+
+2c.)
+``` {r}
+
+model4 <- lm(data[[2]] ~ data[[3]] + log(data[[7]]) + data[[9]] + data[[4]]*data[[8]])
+summary(model4)
+confint(model4)
+```
+
+
+
+3a.)
+
+``` {r}
+model5 <- lm(data[[2]] ~ data[[4]] + data[[10]] + log(data[[7]]) + data[[9]])
+
+plot(data$LengthOfStay,model5$residuals); abline(h=0)
+qqnorm(model5$residuals); qqline(model5$residuals)
+
+```
+
+
+``` {r}
+x = data[[4]]
+model6 <- lm(data[[2]] ~ data[[4]] + poly(x,2) + data[[10]] + log(data[[7]]) + data[[9]])
+
+summary(model6)
+
+plot(data$LengthOfStay,model6$residuals); abline(h=0)
+qqnorm(model6$residuals); qqline(model6$residuals)
+
+
+```
+
+The models appear to have about the same fits when looking at the diagnostic checks. Perhaps the model with the log term has a slightly better fit, but overall they appear to have roughly the same level of fit.
+

@@ -1,0 +1,121 @@
+---
+title: "Untitled"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+mean(data[[1]])
+var(data[[1]])
+```
+
+```{r}
+setwd("~/Desktop")
+data <- read.table(file = "bp.txt", header = TRUE)
+
+
+hist(data[[1]], xlab='weight')
+```
+
+The data for weight appears to be slightly skewed to the right, with a mean of 182 and a high variance of 612.
+
+
+```{r}
+mean(data[[2]])
+var(data[[2]])
+```
+
+
+```{r}
+setwd("~/Desktop")
+data <- read.table(file = "bp.txt", header = TRUE)
+
+
+hist(data[[2]], xlab='sysbp')
+```
+
+The data for sysbp has a much lower variance, with a variance of only 180 and a mean of 145 it also appears to be more normally distributed.
+
+
+
+```{r}
+setwd("~/Desktop")
+data <- read.table(file = "bp.txt", header = TRUE)
+
+plot(x = data[[1]], y = data[[2]], xlab = 'Weight', ylab = 'sysbp')
+```
+
+```{r}
+setwd("~/Desktop")
+data <- read.table(file = "bp.txt", header = TRUE)
+
+model <- lm(formula = data[[2]] ~ data[[1]], data = data)
+summary(model)
+
+```
+
+2b.)
+slope estimate: .41942
+Intercept Estimate: 69.201437
+
+
+2c.) 
+Causal Interpretation: For every increase in the unit of weight, sysbp will be caused to increase by .41942 units.
+
+2d.)
+Correct Interpretation: .41942 is the expected difference in sysbp for 2 different people whose weight happens to differ by 1 unit.
+
+```{r}
+setwd("~/Desktop")
+data <- read.table(file = "bp.txt", header = TRUE)
+
+plot(x = data[[1]], y = data[[2]], xlab = 'Weight', ylab = 'sysbp')
+abline(model, lwd=3)
+```
+
+
+```{r}
+setwd("~/Desktop")
+data <- read.table(file = "bp.txt", header = TRUE)
+
+model <- lm(formula = data[[2]] ~ data[[1]], data = data)
+residuals <- resid(model)
+plot(x=data[[1]], y=residuals)
+abline(0,0)
+```
+
+2e.) The assumptions of linearity appear to hold, as the linear model appears to be a good model, and the residual plot appears to have no pattern. It may not be totally linear however, as values in the middle portion of the graph appear to be above the projection and values elsewhere tend to fall below the projection. This would be something that could be further analyized.
+
+```{r}
+69.10437 + 195*0.41942
+```
+
+Point estimate for 195 points is 150.8913.
+
+```{r}
+install.packages('tinytex')
+```
+

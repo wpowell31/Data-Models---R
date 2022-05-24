@@ -1,0 +1,84 @@
+---
+title: "401HW4"
+output: html_document
+---
+
+
+```{r}
+setwd("~/Desktop")
+data <- read.table(file = "bp.txt", header = TRUE)
+
+t <-qt(.975, df=24)
+model <- lm(formula = data[[2]] ~ data[[1]], data = data)
+summary(model)
+
+residuals <- resid(model)
+v <- sum(residuals^2)/24
+x <- 200*.41942 + 69.10437
+x
+
+sePred <- v*(1 + ((x - mean(data[[1]]))^2)/var(data[[1]])/26)
+
+l = x-t*sePred
+h = x+t*sePred
+l
+h
+```
+
+The prediction interval predicts in what range a future individual observation will fall, while a confidence interval shows the likely range of values associated with some statistical parameter of the data. The prediciton interval here is wider numerically.
+
+1b.) 
+Since 140 is in our 95% prediction interval, the data does not allow us to reject this hypothesis. The p value is,
+
+```{r}
+z <- (152.9884-140)/sePred
+z
+1-pnorm(z)
+```
+The p value is .435
+
+
+
+2c.)
+```{r}
+A <- matrix(c(1,0,1,1,0,1), nrow=2, ncol=3, byrow = TRUE)
+w <- matrix(c(1,0,.5,0,1,0,.5,0,1), nrow=, ncol=3, byrow = TRUE)
+A%*%w%*%t(A)
+
+```
+
+
+3b.)
+
+```{r}
+x <- matrix( c(1, 9, 3, 6, 1, 25, 8, -16, 1, -3, -27, 8, 1, -10, 4, 3, 1, 1, -1, 1), nrow=5, ncol=4, byrow=TRUE)
+m <- t(x)%*%x 
+m
+solve(m)
+
+
+```
+
+3c.)
+```{r}
+x <- matrix( c(1, 9, 3, 6, 1, 25, 8, -16, 1, -3, -27, 8, 1, -10, 4, 3, 1, 1, -1, 1), nrow=5, ncol=4, byrow=TRUE)
+y <- matrix( c(12, -30, 13, 8, 4), nrow=5, ncol=1, byrow=TRUE)
+
+b <- solve(m)%*%t(x)%*%y
+b
+model <- lm(formula = y ~ x)
+summary(model)
+```
+The estimates are the same.
+
+
+3d.)
+```{r}
+h <- x%*%solve(m)%*%t(x)
+h
+
+
+```
+
+
+
