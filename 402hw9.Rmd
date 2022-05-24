@@ -1,0 +1,164 @@
+---
+title: "hw9"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+data <- read.csv('chicago.csv')
+
+
+```
+1.) Exploratory Data Analysis
+```{r}
+suppressMessages(library(GGally))
+ggpairs(data[,c(1,2,3,4,6)], title = 'correlogram of death and air pollution with ggpairs()', pch = '.')
+
+
+```
+
+```{r}
+pairs(data[,c(1,2,3,4,6)], pch = '.')
+```
+Some of the associations here do not appear linear, suggesting that a non-linear model might be better in this situation.
+
+2.) Fitting Models
+
+```{r}
+suppressPackageStartupMessages(library(mgcv))
+data <- na.omit(data)
+
+
+model0 <- mean(data$death)
+model1 <- lm(death ~ pm10median + so2median + o3median + tmpd, data=data)
+model2 <- gam(death ~ s(tmpd, k=5, fx=TRUE) + s(pm10median, k=5, fx=TRUE) + 
+                      s(so2median, k=5, fx=TRUE) + 
+                      s(o3median, k=5, fx=TRUE), data = data)
+
+model0
+
+```
+
+```{r}
+plot(model1, pch = '.')
+plot(model2)
+
+```
+For model 1, residuals appear strangly clustered, with some deviations visible on the Normal QQ plot.
+
+
+3.) Assumptions of an F Test
+
+An F test is for comparisons of two models, where one model is nested, or contained in the other model. The null hypothesis is that the simpler model is better. When the null hypothesis is true, we have an F distribution, and reject the null hypothesis if the F value is above the quantile for the F distribution with that degrees of freedom. The other assumptions are for independence and normality.
+
+
+
+
+4.) Partial Response Functions for Model 2
+
+```{r}
+plot(model2)
+
+```
+
+Comments: There appears to be nonlinearity present visually in the response plots, especially in pm10median. However, they do not appear entirely nonlinear, and thus the following F test is still a good idea.
+
+
+5.) Hypothesis Test
+
+Null hypothesis: not a substantative difference when adding terms between model 1 and model 2
+Alternate hypothesis: There is a substantative difference between the two models.
+
+```{r}
+anova(model1, model2, test = "F")
+
+
+```
+
+Here in the output of our hypothesis test, we can see a very large F value of 11.779 and a small p value of 2.2e-16. Thus:
+
+Using an F test, we reject the null hypothesis and conclude that F=11.779, 4007 degrees of freedom, and we are 1-2.2e-16 confident that there is a substantative difference between the two models.
+
+6.) 95% Bootstrap Confidence Interval for the Mean Difference in Deaths
+
+```{r}
+B <- 100
+n <- nrow(data)
+diff <- 1:B
+
+for(b in 1:B){
+  samp <- sample(n, replace=TRUE)
+  bootdata <- data[samp,]
+  bootmodel2 <- gam(death ~ s(tmpd, k=5, fx=TRUE) + s(pm10median, k=5, fx=TRUE) + 
+                      s(so2median, k=5, fx=TRUE) + 
+                      s(o3median, k=5, fx=TRUE), data = bootdata)
+  diff[b] <- predict(bootmodel2, newdata = data.frame(so2median = -.64, pm10median = -.15, o3median = -2.18, tmpd = 65)) - 
+                predict(bootmodel2, newdata = data.frame(so2median = -1, pm10median = -.5, o3median = -2.5, tmpd = 65))
+  
+}
+
+
+```
+
+Given results of the F test, did not want to make assumptions of the distribution of the data. Thus I used a nonparametric bootstrap based on resampling cases
+
+```{r}
+quants <- quantile(diff, probs = c(.025, .975))
+quants
+
+```
+Above we see the 95% bootstrapped confidence interval.
+
+
+7.)
+
+```{r}
+model3 <- gam(death ~ s(tmpd, k=11) + s(pm10median, k=11) + 
+                      s(so2median, k=11) + 
+                      s(o3median, k=11), data = data)
+
+summary(model3)
+plot(model3)
+
+```
+
+Comments: Temperature appears to have wide variations and is the most non-linear, as well as pm10 median. The other two predictors appear somewhat more flat.
+
+
+8.) 10-fold cross validations on model 3
+
+```{r}
+pred_errors <- 1:10
+samp <- sample(rep(1:10, length.out = nrow(data)), replace = FALSE)
+
+for(k in 1:10){
+  testd <- data[samp == k, ]
+  traind <- data[!(samp == k), ]
+  n <- nrow(traind)
+  model3.cv <- gam(death ~ s(tmpd, k=11) + s(pm10median, k=11) + 
+                      s(so2median, k=11) + 
+                      s(o3median, k=11), data = traind)
+  pred_errors[k] <- mean((testd$death - predict(model3.cv, newdata = testd))^2)
+  
+}
+
+```
+
+```{r}
+mean(sqrt(pred_errors))
+
+```
+
+```{r}
+mean(sqrt(pred_errors))/mean(data$death)
+
+```
+
+We can see that the expected difference in prediction errors is about 12% of the number of deaths on a typical day. While not entirely precise, this is gives a reasonablee prediction for the number of deaths using only temperature and pollution.
+
+
+
+

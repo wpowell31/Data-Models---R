@@ -1,0 +1,168 @@
+---
+title: "hw10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+pima_data <- read.csv('pima.csv')
+
+```
+a.)
+
+```{r}
+for(i in 1:9){
+  hist(pima_data[,i])
+}
+
+```
+
+
+```{r}
+ind <- c(2,3,4,5,6)
+pima_data[,ind][pima_data[,ind] == 0] <- NA
+pima<- na.omit(pima_data)
+
+
+
+
+```
+b.)
+
+```{r}
+model1 <- glm(test ~ pregnant + glucose + diastolic + triceps + insulin + bmi + insulin + diabetes + age, family = binomial, data = pima)
+summary(model1)
+
+```
+
+c.) Model 2
+```{r}
+model2 <- glm(test ~ 1, family = binomial, data = pima)
+summary(model2)
+
+```
+
+Test of if model 2 is improvement over model 1
+```{r}
+anova(model1,model2, test='Chisq')
+
+```
+
+Here from this Chi-square test we can see the p value is 2.2e-16. There is significant evidence to believe that model 1 is an improvement over model 2.
+
+d.) 
+
+```{r}
+plot(pima$diabetes, pima$insulin, xlab = 'diabetes', ylab = 'insulin')
+
+```
+We can see a somewhat positive relationship between people with higher signs of diabetes and higher insulin values. Also, in the correlation plot we can see that diabetes and insulin have a correlation of .185, again suggesting a slight positive relationship. The insulin coefficient in model 1 is -8.253e-04. The diabetes coefficient is 1.141. So the diabetes coefficient is much more significant, suggesting that these two answers do not contradict at all. 
+
+e.)
+```{r}
+model3 <- step(model1, direction = 'backward')
+summary(model3)
+```
+
+
+```{r}
+dtest <- anova(model3,model1,test='Chisq')
+dtest
+```
+
+Here we have a very large p value, therefore there is not reason to believe in a significant improvement between the models. 
+
+
+
+f.) Bootstrap
+```{r}
+B <- 1000
+boot_dev <- 1:B
+#how do this
+boot_sample <- function(pima){
+  preds <- fitted(model3)
+  y <- 1:392
+  for(i in 1:392){
+    y[i] <- rbinom(1,1,preds[[i]])
+  }
+  pima$boot <- y
+  return(pima)
+}
+
+for(i in 1:B){
+  boot_data <- boot_sample(pima)
+
+  boot_model1 <- glm(boot ~ pregnant + glucose + diastolic + triceps + insulin + bmi + insulin + diabetes + age, family = binomial, 
+                     data = boot_data)
+  boot_model3  <- step(boot_model1, direction = 'backward', trace=0)
+  
+  boot_dev[i] <- anova(boot_model3, boot_model1, test='Chisq')$Deviance[2]
+  
+}
+
+
+
+```
+
+```{r}
+plot(density(boot_dev))
+sum(boot_dev > 0.8639)/1000
+
+```
+
+Above we can see the distribution of the bootstrap deviances, and the p value of 0.79
+
+
+
+g.) 90% Model 3 confidence interval pima woman
+```{r}
+woman1 <- data.frame(pregnant = 3, glucose = 107, diastolic = 70, triceps = 29.2, insulin = 160, bmi = 32.4, diabetes = .6, age = 34)
+predict(model3, newdata = woman1, type = 'response', se.fit = TRUE)
+```
+
+```{r}
+confint.g <- c(0.1901944 + qnorm(.05)*0.02977891, 0.1901944 + qnorm(.95)*0.02977891)
+confint.g
+```
+Above we can see the 90% confidence interval for the model 3 positive test result
+
+h.) Difference in log odds 90% confidence interval
+```{r}
+diff <- data.frame(pregnant = 0, glucose = 0, diastolic = 0, triceps = 0, insulin = 0, bmi = 0, diabetes = .25, age = 0)
+predict(model3, newdata = diff, type = 'link', se.fit = TRUE)
+```
+
+```{r}
+confint.h <- c(-9.704352 + qnorm(.05)*1.06565, -9.704352 + qnorm(.95)*1.06565)
+confint.h
+```
+Above we can see the 90% confidence interval. Above in the output of our prediction we can see our point estimate of -9.704352.
+
+i.)
+Verify that claim?
+What should newdata be in this shit?
+
+```{r}
+library(np)
+model4 <- npreg(test ~ fitted(model3), data = pima, bws = .075)
+plot(fitted(model3), fitted(model4))
+
+```
+
+```{r}
+model5 <- npreg(test ~ fitted(model1), data = pima, bws = .075)
+plot(fitted(model5), fitted(model1))
+```
+
+
+We can see that in both cases, plotting the fitted values against each other does not yield a straight line. Model 3 appears to be worse fitted overall, while model 1 at larger extreme values appears to be a horrendous fit. 
+
+
+
+
+
+
+

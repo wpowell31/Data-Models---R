@@ -1,0 +1,277 @@
+---
+title: "36-402 DA Exam 1"
+author: "Will Powell (wpowell)"
+date: "March 25, 2022"
+output: pdf_document
+linestretch: 1.241
+fontsize: 12pt
+fontfamily: mathpazo
+---
+
+
+```{r setup, include = FALSE}
+# By default, do not include R source code in the PDF. We do not want to see
+# code, only your text and figures.
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+
+# Introduction
+
+Economists and Private Companies are interested in knowing what drives the growth of economies in cities. In addition to answering questions regarding that could help improve economies and urban standards of living, our client, a large technology company, is interested in knowing if moving to a city will help drive its economy, allowing them to ask for large tax cuts to incentivize the move. (1)There are two main hypotheses that concern the driving forces or urban economies. The first, the Power law scaling hypothesis, states that larger cities can support businesses more efficiently and that their size alone is the driving factor of their economic prosperity. The second, the Urban heirarchy hypothesis, postulates that highly skilled workers and businesses are the driving forces of a good economy. Under this hypothesis, advanced companies are responsible for city growth, or Gross Metropolitan Product (GMP). In this study, we analyzed economic data on cities and fit models that assessed the validity of the two hypotheses and the impact of the company's potential move.
+
+(2)Following thorough analysis, we concluded that the Urban hierarchy hypothesis was the better estimator of relationships to per-capita GMP. This findings came about after fitting a linear model to the log-transformed power-law hypothesis formula, and showing that a kernel estimator using economic data modeling the Urban hierarchy hypothesis had much lower prediction error. Following this, a third model was fit using the residuals of model 2, and its results showed that after for accounting for the economic factors a city's population did not have a significant effect on its per-capita GMP. 
+
+
+# Exploratory Data Analysis
+   
+## Data
+
+The data contains economic information on 133 cities, or Metropolitan Statistical Areas that include areas surrounding cities. (1) The data collected from the cities includes predictor variables such as Population and information on the makeup of the cities economies. This information is made up of proportions between 0 and 1 for Finance, Professional and Technical Services, Information Communication and Technology, and Corporate Management. These represent the share of the cities economies that is made up of these industries. 
+
+## Exploration
+
+(1)The data collected from the cities includes predictor variables such as Population and information on the makeup of the cities economies. This information is made up of proportions between 0 and 1 for Finance, Professional and Technical Services, Information Communication and Technology, and Corporate Management. These represent the share of the cities economies that is made up of these industries. All four predictor variables have distributions that are skewed to the right. Finance has the most normal distribution of the four, with more cities having a higher percent or their economy coming from finance than the other variables. The figure below gives histograms of these 4 variables.
+
+```{r, fig.width=4, fig.height=3, fig.cap="Histograms of Predictor Variables."}
+data <- read.csv('gmp.csv')
+
+hist(data$prof.tech, main = 'Histogram of Prof and Tech Services', 
+                    xlab = 'Professional and Technical Services Proportion')
+hist(data$finance, main = 'Histogram of Finance', xlab = 'Proportion in Finance')
+hist(data$ict, main = 'Histogram of ITC', 
+                xlab = 'Proportion of Cities Economies in ITC')
+hist(data$management, main = 'Histogram of Corporate Management', xlab = 'Proportion in Corporate Management')
+```
+
+
+
+
+
+(2)Our response variable is per-capita gross metropolitan product, or PCGMP, in dollars. Its distribution is skewed heavily to the right, pre log-transformation. In figure 3 we can see both the Histogram and the Density function of PCGMP.
+
+```{r, fig.width=4, fig.height=3, fig.cap="Histogram and Density of PCGMP."}
+hist(data$pcgmp)
+plot(density(data$pcgmp), main = 'Density of PCGMP')
+
+```
+
+(3)From the figues, we can see positive relationships with PCGMP with population, finance, professional and technical services, ICT, and Corporate Management. Population, Professional and Technical Services, and ICT especially have strong positive relationships with PCGMP. It is interesting to note how strong the relationship is to Population and how Population has a stronger relationship than Finance and Corporate Management, two of the other predictors. This is interesting to note as it will be relevant for the Power law scaling hypothesis that is analyzed later on.
+
+```{r}
+suppressMessages(library(GGally))
+ggpairs(data[,3:8], title="correlogram with ggpairs()") 
+```
+
+(4)We can see how Professional and Technical Services and Information, Communication and Technology have high correlations to per-capita GMP. This bodes well for out client, who as a technology company would fit this description. 
+
+
+## Modeling & Diagnostics
+   
+   
+(1)We use regression to estimate the power-law-scaling model $Y \approx bN^a$ of the relationship between per-capita GMP and population. To do this, we log transform our data for Model 1:
+$$
+logY \sim alogN + c
+$$
+(2)In the figures below we see the diagnostic plots of our model fit. There appear to be some violations in the assumptions of the linear model, such as how in the aa plot we can see there are more observations for lower quantiles and less for higher quantilts than we would expect. In addition, homoscedasticity does not seem to be entirely correct, as from the residual plots we can see the variance decrease with larger values of population.
+
+```{r, fig.width=4, fig.height=3, fig.cap="Diagnostic Plots of Model 1."}
+model1 <- lm(log(pcgmp) ~ log(pop), data = data)
+plot(model1)
+
+```
+(3)We use 10-fold cross validation to estimate the prediction error of model 1. In the table below we can see the relatively large extimated standard error, as well as the standard error of this estimate. This high variability suggests that this model has some errors in best capturing the relationship of per-capita GMP. 
+
+
+Cross Validation to estimate errors
+```{r}
+#Cross-Validation to estimate errors
+pred_errors <- matrix(1:10, nrow = 1, byrow = TRUE)
+samp <- sample(rep(1:10, length.out = nrow(data)), replace = FALSE)
+
+for(k in 1:10){
+  testd <- data[samp == k, ]
+  traind <- data[!(samp == k), ]
+  
+  
+  model1.CV <- lm(log(pcgmp) ~ pop, data = traind)
+  testd$pcgmp
+  pred_errors[1,k] <- mean((testd$pcgmp - exp(predict(model1.CV,newdata=testd)))^2)
+  
+}
+
+
+cvdata <- matrix(c(mean(pred_errors), sd(pred_errors)), ncol = 2)
+colnames(cvdata) <- c('Estimated MSE', 'Standard Error')
+as.table(cvdata)
+knitr::kable(cvdata, "simple")
+
+```
+
+
+
+(4)In addition using cross-validation to estimate standard error, we will now use the bootstrap method to estimate the bias of our log-fitted model 1. To do so, we will simulate the residuals for each of the predicted values of our model 1. Each time we resimulate the data, we refit the linear model using the same formula as before. We take an estimate from each model for a city of the same size as Pittsburgh. We repeat this entire process 1000 times, take the mean of each bootstrapped estimate, and subtract this from our original prediction. This difference is approximately the estimated bias of our original model. 
+
+
+```{r}
+generate_data <- function(xs) {
+  ys <- predict(model1, newdata = data.frame(pop = xs)) +
+                  rnorm(length(xs), sd = 0.2569) 
+  return(data.frame(x = xs, y = ys))
+  
+}
+```
+
+
+```{r}
+B <- 1000
+bootstrap_estimate <- numeric(B)
+for (ii in 1:B) {
+  boot_data <- generate_data(data$pop)
+  boot_fit <- lm(y ~ x, data = boot_data)
+  bootstrap_estimate[ii] <- exp(predict(boot_fit, newdata = data.frame(x = 2361000)))
+}
+
+bias <- mean(bootstrap_estimate) - exp(predict(model1, newdata = data.frame(pop = 2361000)))
+boot_table <- matrix(c(bias, sd(bootstrap_estimate)), ncol = 2)
+colnames(boot_table) <- c('Estimated Bias', 'Standard Error')
+
+knitr::kable(boot_table, "simple")
+
+```
+
+
+(5)Next, we investigate the Urban hierarchy hypothesis by fitting a kernel regression that estimates per capita GMP from the proportion of the cities economies that are made up of finance, professional and technical services, information communication and technology, and corporate management. We define model 2:
+
+$$rˆ(x) =\sum y_i w(x, x_i, h)$$
+
+
+$$
+w(x,x_i,h) = K(x-x_i/h)/(\sum K(x-x_i/h))
+$$
+In the above equations, both $x_i$ and $x$ are vectors, whose values are the inputs for each of the four financial factors we are using for the model. For a Gaussian kernel, the kernel function is the normal distribution.The Kernel for multiple parameters is a product Kernel, where we multiply the kernel for each component together (Shalizi 95).
+
+$$
+K(x_i - x) = K(x^1 - x^1_i)K(x^2 - x^2_i)K(x^3 - x^3_i)K(x^4 - x^4_i)
+$$
+
+Below can see plots of log per-capita GMP varies with each of our covariates. As we can see, the economic factors, especially Information, Communication, and Technology have a strong positive relationship with GMP. 
+
+
+```{r}
+suppressMessages(library(np))
+# Compute the bandwidths
+bw <- apply(data[,c(5,6,7,8)], 2, sd) / nrow(data)^(0.2)
+# Model 2
+model2 <- npreg(log(pcgmp) ~ finance + prof.tech + ict + management, 
+                          bws = bw, data = data, residuals=TRUE)
+
+plot(model2)
+
+residuals <- resid(model2)
+
+
+
+```
+
+
+```{r}
+#Cross-Validation of Model 2 to estimate errors
+pred_errors2 <- matrix(1:10, nrow = 1, byrow = TRUE)
+samp2 <- sample(rep(1:10, length.out = nrow(data)), replace = FALSE)
+
+for(k in 1:10){
+  testd <- data[samp2 == k, ]
+  traind <- data[!(samp2 == k), ]
+  
+  bw <- apply(traind[,c(5,6,7,8)], 2, sd) / nrow(traind)^(0.2)
+  model2.CV <- npreg(log(pcgmp) ~ finance + prof.tech + ict + management, bws = bw, data = traind)
+  pred_errors2[1,k] <- mean((testd$pcgmp - exp(predict(model2.CV,newdata=testd)))^2)
+  
+}
+
+
+```
+
+
+(6)Next we fit a linear to the residuals of our model 2. This will allow us to determine how strong the relationship between GMP and population is after the other variables have been accounted for. We use the log of the population as a covariate, and define model 3 as follows:
+
+$$
+residuals \sim alogN + b
+$$
+
+Below we can see the fit model of model 3, noting the slighly negative relationship with Log(Population). 
+```{r, fig.width=4, fig.height=3, fig.cap="Fit of Model 3."}
+model3 <- lm(residuals ~ log(data$pop))
+
+plot(log(data$pop), residuals, xlab = "Log(Population)")
+abline(model3)
+
+```
+
+
+
+## Results
+
+(1)To evaluate the power-law scaling hypothesis, we performed 10-fold cross validation analysis to estimate prediction error. In addition, we performed bootstrap analysis, by resimulating the data 1000 times, and simulating new residuals taken from normal distributions. Taking the mean of the model's predictions for a city the size of Pittsburgh, and subtracting from our original prediction gives an estimate of the model's bias. The results of these calculations are given in the tables below:
+```{r}
+rownames(cvdata) = c('CV Errors')
+rownames(boot_table) = c('Boostrap')
+
+knitr::kable(cvdata, "simple")
+knitr::kable(boot_table, "simple")
+```
+
+As we can see, the estimated MSE using CV is very high, and there is evidence of bias in the model as well. This gives evidence that model 1 is less suitable to quantify the relationship in per capita GMP. We also performed cross validation to estimate the error of model 2, which predicted per-capita GMP based on the four economic factors as described in the Urban hierarchy hypothesis. The results of this cross-validation are given in the table below:
+
+```{r}
+cv2_table <- matrix(c(mean(pred_errors2), sd(pred_errors2)), ncol = 2)
+colnames(cv2_table) <- c('Estimated MSE', 'Standard Error')
+rownames(cv2_table) <- c("CV of Model 2")
+knitr::kable(cv2_table, "simple")
+
+```
+
+(2)As We can see, model 2 has significanly lower estimated MSE from cross-validation than model 1, suggesting that it would be a better fit. Building off of this, in model 3, we fit the log of Population to the residuals of model 2. (3)This effectively allows to see the relationship of population on per-Capita GMP after controlling for the economic variables. Using Model 3, our estimate of $a$, the scaling coefficient in the power-law model, was $a = -.0238$.
+
+```{r}
+#Bootstrap estimate for confidence interval of model3
+B <- 200 # number of bootstraps
+N <- nrow(data)
+m3boots <- numeric(B)
+
+# Loop through the bootstrap samples
+for (b in 1:B) {
+  # Choose the bootstrap sample
+  boots <- sample(N, N, replace = TRUE)
+  tempdata <- data[boots, ]
+  temp.residuals <- residuals[boots ]
+  
+  model3.boot <- lm(temp.residuals ~ log(tempdata$pop))
+  
+  m3boots[b] <- model3.boot$coefficients[2]
+  
+}
+
+se.boot3 <- sd(m3boots)
+l = model3$coefficients[2] - 1.96*se.boot3
+u = model3$coefficients[2] + 1.96*se.boot3
+
+m3_table <- matrix(c(l, u), ncol = 2)
+colnames(m3_table) <- c('2.5%', '97.5%')
+rownames(m3_table) <- c("Conf Int of scaling exponent")
+knitr::kable(m3_table, "simple")
+
+
+```
+
+
+(4)The confidence interval given above means that we are 95% confident that the true scaling exponent when accounting for all the variations lies in the interval. Given the values in the confidence interval, this means that the relationship between population and per-capita GMP when accounting for the economic variables is not significant. 
+
+
+## Conclusions
+
+(1)Analysis of both the power-law scaling hypothesis and the Urban hierarchy hypothesis showed that models fit based on the Urban hierarchy hypothesis were better fits of the data and had lower standard errors. Further, analysis of the scaling component after in the power-law model after taking in the effect of the economic factors showed that there was little to no impact of population on that city's per-capita GMP. Our client, as a large technology company, would expect cities with higher proportions of technology companies to have higher per-capita GMP. This information would aid in the company's bid for tax breaks to aid its move. (2)The errors of the model remain high, and it would remain difficult to predict the amount of casual change in PCGMP accurately. However, the positive relationship as shown in the data is undeniable. 
+
+

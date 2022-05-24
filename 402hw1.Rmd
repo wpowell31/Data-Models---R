@@ -1,0 +1,170 @@
+---
+title: "402hw1"
+output: html_document
+---
+
+
+```{r}
+library(FNN)
+
+load('engine.Rdata')
+
+ls()
+
+```
+
+1a.)
+
+```{r}
+
+plot(engine.xtrain, engine.ytrain, main = "All x vs y")
+```
+
+There appears to be a somewhat negative linear trend, although there appears to a slight curve to it, suggesting that the trend may not be entirely linear.
+
+
+1b.)
+
+```{r}
+library(np)
+
+plot(engine.xtrain[,1], engine.ytrain[,1], main = "Kernel Regression, h = 10,50,100", xlab = 'xtrain',ylab = 'ytrain')
+
+first <- data.frame(x = engine.xtrain[,1], y = engine.ytrain[,1])
+
+kregobj10 <- npreg(y ~ x, data = first, bws = 10)
+lines(x0, predict(kregobj10, newdata = data.frame(x=x0)), col = "red", lwd = 2)
+
+kregobj50 <- npreg(y ~ x, data = first, bws = 50)
+lines(x0, predict(kregobj50, newdata = data.frame(x=x0)), col = "blue", lwd = 2)
+
+kregobj100 <- npreg(y ~ x, data = first, bws = 100)
+lines(x0, predict(kregobj100, newdata = data.frame(x=x0)), col = "green", lwd = 2)
+
+
+
+
+legend('topright', 
+       fill = c("red", "blue", "green"),
+       legend = c('h = 10', 'h = 50', 'h = 100')
+)
+
+
+
+
+
+
+```
+
+1c.)
+As the bandwidth parameter becomes larger, the lines become smoother and have less jumps. This is similar to another smoother, the K Nearest Neighbors method, where increasing the number of neighbors in the algoriths fits less jaggedy lines there as well.
+
+1d.)
+
+```{r}
+
+k <- 1:20
+xv <- 5*k
+
+
+errtest.ker <- numeric(20)
+first <- data.frame(x = engine.xtrain[,1], y = engine.ytrain[,1])
+
+for(i in xv){
+  kregobj <- npreg(y ~ x, data = first, bws = i)
+  j = i/5
+  ypred <- predict(kregobj, newdata = data.frame(x = engine.xtest[,1]))
+  
+  
+  errtest.ker[j] <- mean((engine.ytest[, 1] - ypred) ^ 2)
+  
+  
+}
+
+plot(xv, errtest.ker, main = 'Kernel Test errors vs bandwidth value', xlab = 'Bandwidth', ylab = 'Test error')
+
+
+
+```
+1e.)
+
+```{r}
+
+min(errtest.ker)
+which.min(errtest.ker)
+
+```
+
+The min bandwidth value is 30, with a test error of 8.799357.
+
+```{r}
+
+plot(engine.xtrain[,1], engine.ytrain[,1], main = "Kernel Regression, h = 30",xlab = 'xtrain',ylab = 'ytrain')
+
+first <- data.frame(x = engine.xtrain[,1], y = engine.ytrain[,1])
+
+kregobj30 <- npreg(y ~ x, data = first, bsw = 30)
+lines(x0, predict(kregobj30, newdata = data.frame(x=x0)), col = "red", lwd = 2)
+
+
+```
+
+This fit appears to do a good job of capturing the variations without overfitting and oversmoothing the fit.
+
+
+
+
+1f.)
+
+```{r}
+
+k <- 1:20
+xv <- 5*k
+sets <- 1:40
+
+
+avtesterr.ker = numeric(20)
+
+
+for(i in sets){
+  errtest.ker <- numeric(20)
+  for(j in xv){
+    data <- data.frame(x = engine.xtrain[,i], y = engine.ytrain[,i])
+    kregobj <- npreg(y ~ x, data = data, bws = j)
+    k = j/5
+    ypred <- predict(kregobj, newdata = data.frame(x = engine.xtest[,i]))
+    
+    
+    errtest.ker[k] <- mean((engine.ytest[, i] - ypred) ^ 2)
+    
+  
+  }
+  avtesterr.ker <- avtesterr.ker + errtest.ker
+  
+}
+
+avtesterr.ker <- avtesterr.ker/40
+
+
+plot(xv, avtesterr.ker, main = 'Bandwidth vs Average Kernel Test Error', xlab = 'Bandwidth', ylab = 'Test error')
+
+
+
+
+
+
+
+```
+
+```{r}
+min(avtesterr.ker)
+5*which.min(avtesterr.ker)
+
+```
+
+
+The optimal bandwidth is still h = 30, and the average test error has decreased slightly.
+
+
+
+

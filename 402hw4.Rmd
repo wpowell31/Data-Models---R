@@ -1,0 +1,235 @@
+---
+title: "402hw4"
+output: html_document
+---
+
+```{r}
+library(graphics)
+
+```
+
+
+```{r}
+dept.admits <- data.frame(dept = LETTERS[1:6], admit_rate = numeric(6))
+
+for(i in 1:6){
+  rate <- sum(UCBAdmissions[1,,i])/(sum(UCBAdmissions[1,,i]) + sum(UCBAdmissions[2,,i]))
+  dept.admits[i,2] <- rate
+}
+dept.admits
+
+```
+
+```{r}
+male.admits <- c(0.62060606,0.63035714,0.36923077,0.33093525,0.27748691,0.05898123)
+female.admits <- c(0.82407407,0.68000000,0.34064081,0.34933333,0.23918575,0.07038123)
+
+total <- 1198+557+1493+1278
+p_z <- c(0,0,0,0,0,0)
+
+for(i in 1:6){
+  p_z[i] <- sum(UCBAdmissions[,,i])/total
+}
+
+r.1 <- c(0,0,0,0,0,0)
+for(i in 1:6){
+  r.1[i] <- (p_z[i]*male.admits[i])
+  
+}
+r.one <- sum(r.1)
+r.one
+
+r.0 <- c(0,0,0,0,0,0)
+for(i in 1:6){
+  r.0[i] <- (p_z[i]*female.admits[i])
+  
+}
+r.zero <- sum(r.0)
+r.zero
+
+r.one - r.zero
+
+
+
+```
+
+We can see here that the treatment effect is very slight when adjusting for the departments.
+
+2b.)
+
+```{r}
+male.admits <- c(0.62060606,0.63035714,0.36923077,0.33093525,0.27748691,0.05898123)
+female.admits <- c(0.82407407,0.68000000,0.34064081,0.34933333,0.23918575,0.07038123)
+
+
+
+dept.admits.g <- data.frame(dept = LETTERS[1:6], m.admit = male.admits, f.admit = female.admits)
+dept.admits.g
+
+
+plot(NULL, xlim=c(0,1), ylim=c(0,1), ylab="y label", xlab="x lablel")
+
+colors <- c("blue", "red", "green", "orange", "gold", "purple")
+for(i in 1:6){
+  segments(0,dept.admits.g[i,2], 1, dept.admits.g[i,3], col=colors[i])
+}
+
+
+```
+
+1c.)
+```{r}
+condz.m <- c(0,0,0,0,0,0)
+for(i in 1:6){
+  condz.m[i] <- sum(UCBAdmissions[,1,i])/sum(UCBAdmissions[,1,])
+}
+
+condz.f <- c(0,0,0,0,0,0)
+for(i in 1:6){
+  condz.f[i] <- sum(UCBAdmissions[,2,i])/sum(UCBAdmissions[,2,])
+}
+
+
+marg.z <- c(0,0,0,0,0,0)
+for(i in 1:6){
+  marg.z[i] <- sum(UCBAdmissions[,,i])/sum(UCBAdmissions)
+}
+
+
+dept <- 1:6
+plot(dept,condz.m, type='l', col='blue', ylab='distribution', ylim=c(0,1))
+lines(condz.f,type='l', col='red')
+lines(marg.z, type='l', col='green')
+legend(1,95,legend = c('males', 'females','total'), col=c('blue','red','green'))
+```
+
+As we can see with the blue males line, the red females line, and the green total line, that females tend to apply more to the later departments which have lower rates of admission.
+
+Question 2
+2a.)
+
+```{r}
+sat <- read.table("CASE1201.ASC", header = TRUE)
+
+```
+
+```{r}
+
+sat$raw_rank <- rank(sat$sat)
+head(sat)
+
+
+```
+
+```{r}
+reduced.model <- lm(sat$sat ~ sat$takers + sat$rank)
+summary(model)
+
+```
+
+```{r}
+order.vec = order(reduced.model$res, decreasing = TRUE)
+states = factor(sat[order.vec, 1])
+newtable = data.frame(State = states,
+Residual = as.numeric(round(reduced.model$res[order.vec], 1)),
+oldrank = (1:50)[order.vec])
+
+newtable
+```
+
+Discuss rankings, states with lower proportions have higher scores
+talk about rank and takers coeffs in model
+
+
+```{r}
+
+rmod.res = resid(reduced.model)
+plot(sat$sat, rmod.res, ylab = 'residuals', xlab = 'sat scores')
+abline(0,0)
+
+
+
+```
+
+2c.) Discuss
+
+
+2d.) Discuss
+
+
+
+
+
+4.) Housing data Revisited
+
+
+4a.)
+```{r}
+housetrain.data <- read.csv("housetrain.csv")
+
+
+```
+
+```{r}
+lat <- housetrain.data$Latitude
+long <- housetrain.data$Longitude
+plot(long, lat, pch = '.')
+
+```
+
+Around lat=42, long = -80, long = -120, cluster
+
+4b.)
+
+```{r}
+house_value <- housetrain.data[,4]
+median_household_income <- housetrain.data[,5]
+mean_household_income <- housetrain.data[,6]
+
+lm3 <- lm(house_value ~ mean_household_income + median_household_income)
+lm3.res <- resid(lm3)
+
+plot(lat, lm3.res, pch='.')
+abline(0,0)
+
+plot(long, lm3.res, pch = '.')
+abline(0,0)
+
+```
+appears for longtidue, lower scores in the one area
+
+```{r}
+model4 <- lm(house_value ~ mean_household_income + median_household_income + long + lat)
+
+summary(model4)
+plot(fitted(model4), residuals(model4), pch=".")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,165 @@
+---
+title: "402hw8"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+data <- read.csv('gmp.csv')
+```
+
+
+a.)
+
+```{r}
+model.A <- lm(log(pcgmp) ~ log(pop), data = data)
+
+plot(model.A$residuals)
+plot(model.A)
+summary(model.A)
+
+
+```
+After fitting model A and examining its summary and plots, especially its residuals plot, we that the assumptions of linearity appear to hold true. The plot of the residuals appears to have constant variance and follow the linear trend.
+
+b.) Additive model
+
+```{r}
+library(mgcv)
+model.B <- gam(log(pcgmp) ~ log(pop) + s(log(finance),k = 5, fx = TRUE) 
+                                      + s(log(prof.tech),k = 5, fx = TRUE) 
+                                      + s(log(ict),k = 5, fx = TRUE) 
+                                      + s(log(management),k = 5, fx = TRUE), data = data)
+
+plot(model.B$residuals)
+summary(model.B)
+```
+Examining the residuals, we can see that this model fits the data well, and perhaps even better than the previous model. Examine the additive terms, we can see that prof.tech has a much higher p-value than the other terms. 
+
+c.)
+
+```{r}
+anova(model.A, model.B, test = "F")
+
+```
+
+Here we can see a large F value of 3.4136, and a very small p value of 6.137e-05, this gives us evidence that there is a significant difference in the models, and that the additive terms does make a difference. 
+
+Below we see the partial response plots for the additive terms.
+
+```{r}
+plot(model.B)
+
+```
+
+
+
+part d.)
+how use this predict correctly?
+
+```{r}
+ii <- c(16,25,81)
+predict(model.B, data[ii,], se.fit=TRUE)
+
+
+```
+
+
+```{r}
+qt(.05,6, lower.tail = TRUE)
+qt(.95,6)
+
+```
+
+Below we see the cofidence intervals
+
+```{r}
+10.44639 -  1.94318*0.06729901
+10.44639 +  1.94318*0.06729901
+
+
+10.49524 - 1.94318 * 0.07681718
+10.49524 + 1.94318 * 0.07681718
+
+
+10.30233 - 1.94318 * 0.07910915
+10.30233 + 1.94318 * 0.07910915
+```
+
+
+
+Below we calculate the bootstrap values for standard error.
+```{r}
+
+pred <- matrix(1:3000, nrow = 3)
+
+
+bootstrap_sample <- function(){
+  i <- sample(1:133, 133, replace = TRUE)
+  bootstrap_data <- data[i,]
+  return(bootstrap_data)
+}
+
+for(i in 1:1000){
+  bootstrap_data <- bootstrap_sample()
+  boot_model.B <- gam(log(pcgmp) ~ log(pop) + s(log(finance),k = 5, fx = TRUE) 
+                                      + s(log(prof.tech),k = 5, fx = TRUE) 
+                                      + s(log(ict),k = 5, fx = TRUE) 
+                                      + s(log(management),k = 5, fx = TRUE), data = bootstrap_data)
+  
+  pred[1,i] <- predict(boot_model.B, data[16,])
+  pred[2,i] <- predict(boot_model.B, data[25,])
+  pred[3,i] <- predict(boot_model.B, data[81,])
+  
+}
+
+sd.16 <- sd(pred[1,])
+sd.25 <- sd(pred[2,])
+sd.81 <- sd(pred[3,])
+
+sd.16
+sd.25
+sd.81
+
+```
+
+Below we can see the calculated of the estimated bias from our bootstrap simulations. 
+The biases appear relitavely small. 
+```{r}
+boot.means <- c(mean(pred[1,]), mean(pred[2,]), mean(pred[3,]))
+predict(model.B, data[ii,]) - boot.means
+
+```
+
+Below we calculate the confidence intervals, using the bootstrap.
+
+```{r}
+sorted.16 <- sort(pred[1,])
+sorted.25 <- sort(pred[2,])
+sorted.81 <- sort(pred[2,])
+
+bootCI.16 <- c(2*10.44639 - sorted.16[950], 2*10.44639 - sorted.16[50])
+bootCI.25 <- c(2*10.49524 - sorted.25[950], 2*10.49524 - sorted.25[50])
+bootCI.81 <- c(2*10.30233 - sorted.81[950], 2*10.30233 - sorted.81[50])
+
+bootCI.16
+bootCI.25
+bootCI.81
+
+
+```
+
+We can see that for value 81, we have a larger se value from the bootstrap, resulting in a larger confidence interval. For the first two values the confidence intervals follow very closely. 
+
+
+
+
+
+
+
+
+

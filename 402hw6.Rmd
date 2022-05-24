@@ -1,0 +1,194 @@
+---
+title: "402hw6"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r}
+# Load the np library, but make it shut up
+suppressMessages(library(np))
+# Load the data
+housetrain <- read.csv("housetrain.csv")
+housetest <- read.csv("housetest.csv")
+housedata <- rbind(housetrain, housetest)
+
+# Compute the bandwidths
+bw <- apply(housetrain[,c(5,6,2,3)], 2, sd) / nrow(housetrain)^(0.2)
+
+```
+
+
+```{r}
+model3_MSE <- 1:200
+model5_MSE <- 1:200
+
+samp <- sample(rep(1:10, length.out = nrow(housedata)), replace = FALSE)
+
+bootstrap_sample <- function(){
+  i <- sample(1:10605, 10605, replace = TRUE)
+  bootstrap_data <- housedata[i,]
+  return(bootstrap_data)
+}
+
+for(i in 1:200){
+  bootstrap_data <- bootstrap_sample()
+  pred_errors <- matrix(1:20, nrow = 2, byrow = TRUE)
+  for(k in 1:10){
+    testd <- bootstrap_data[samp == k, ]
+    traind <- bootstrap_data[!(samp == k), ]
+    n <- nrow(traind)
+    model3 <- lm(Median_house_value ~ Median_household_income +
+                                        Mean_household_income,
+                                        data = traind)
+    
+    model5 <- npreg(Median_house_value ~ Median_household_income +
+                                        Mean_household_income,
+                                        data = traind, newdata = testd,
+                                        bws = bw[c(1,2)])
+    
+    pred_errors[1,k] <- mean((testd$Median_house_value - predict(model3,newdata=testd))^2)
+    pred_errors[2,k] <- mean((testd$Median_house_value - model5$mean)^2)
+    
+  }
+  model3_MSE[i] <- mean(pred_errors[1,])
+  model5_MSE[i] <- mean(pred_errors[2,])
+}
+model3_MSE[1:10]
+model5_MSE[1:10]
+
+
+```
+
+
+```{r}
+
+model3_MSE[1:10]
+model5_MSE[1:10]
+hist(model3_MSE - model5_MSE)
+
+```
+The values of the histogram are positive, meaning that model 3 has the higher error on average, suggesting that model5 is the better model.
+```{r}
+qqnorm(model3_MSE - model5_MSE, )
+qqline(model3_MSE - model5_MSE, )
+
+```
+
+```{r}
+
+```
+
+
+
+Question 2.)
+a.)EDA
+```{r}
+abalone_data <- read.csv('abalonemt.csv')
+
+
+model0 <- lm(abalone_data$Shucked.weight ~ abalone_data$Diameter + abalone_data$Length + abalone_data$Height)
+plot(model0)
+
+```
+
+```{r}
+hist(abalone_data$Shucked.weight)
+hist(abalone_data$Height)
+hist(abalone_data$Length)
+hist(abalone_data$Diameter)
+
+
+```
+```{r}
+plot(lm(abalone_data$Shucked.weight ~ abalone_data$Length))
+plot(lm(abalone_data$Shucked.weight ~ abalone_data$Height))
+plot(lm(abalone_data$Shucked.weight ~ abalone_data$Diameter))
+
+```
+
+It appears that some of the relationships between data are not linear, as the data is skewed for many of the histograms. Would still expect positive relationships for the predictors.
+
+```{r}
+spline_fit <- smooth.spline(x = abalone_data$Diameter, y = abalone_data$Shucked.weight)
+
+preds <- predict(spline_fit, x = c(10, 20))
+preds$x # will be vector of 10, 20
+preds$y # will be vector of predictions for those diameters
+
+
+```
+
+
+2b.)
+
+```{r}
+model1 <- lm(log(abalone_data$Shucked.weight) ~ log(abalone_data$Length) + 
+                                                log(abalone_data$Height) + log(abalone_data$Diameter))
+
+model2 <- smooth.spline(x = abalone_data$Diameter * abalone_data$Height * abalone_data$Length, y = abalone_data$Shucked.weight)
+
+plot(model1)
+plot(model2)
+
+
+```
+
+```{r}
+plot(abalone_data$Length + abalone_data$Height + abalone_data$Diameter, abalone_data$Shucked.weight, pch = '.')
+
+
+```
+2c.)
+
+```{r}
+model1.trainerr <- mean((exp(predict(model1)) - abalone_data$Shucked.weight)^2)
+model2.trainerr <- mean((predict(model2, x = abalone_data$Diameter * abalone_data$Height * abalone_data$Length)$y 
+                                                                                      - abalone_data$Shucked.weight)^2)
+
+
+model1.trainerr
+model2.trainerr
+
+
+```
+
+
+2d.) cross validations
+
+```{r}
+samp <- sample(rep(1:5, length.out = nrow(abalone_data)), replace = FALSE)
+pred.errors <- matrix(1:10, nrow = 2)
+
+for(k in 1:5){
+  testd <- abalone_data[samp == k, ]
+  traind <- abalone_data[!(samp == k), ]
+  model1.cv <- lm(log(Shucked.weight) ~ log(Length) + log(Height) + log(Diameter), data = traind)
+
+  model2.cv <- smooth.spline(x = traind$Diameter * traind$Height * traind$Length, y = traind$Shucked.weight)
+  
+  pred.errors[1,k] <- mean((exp(predict(model1.cv, newdata = testd)) - testd$Shucked.weight)^2)
+  pred.errors[2,k] <- mean((predict(model2.cv, x = testd$Diameter * testd$Height * testd$Length)$y - testd$Shucked.weight)^2)
+}
+mean(pred.errors[1,])
+mean(pred.errors[2,])
+
+```
+
+
+```{r}
+confint(model1, log(abalone_data$Diameter), 0.95)[150,]
+
+```
+
+```{r}
+vcov(model1)
+
+```
+
+
+The confidence interval does not include 0. Baled on the EDA and residuals, I think that this assumption is reasonable. 
+
+
+

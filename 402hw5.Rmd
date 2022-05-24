@@ -1,0 +1,165 @@
+---
+title: "Untitled"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+1.)
+a.)
+
+```{r}
+library(np)
+housetrain <- read.csv("housetrain.csv")
+n = 5303
+bws5 <- apply(housetrain[ ,c(5,6)], 2, sd) / n^(0.2)
+bws6 <- apply(housetrain[ ,c(5,6,2,3)], 2, sd) / n^(0.2)
+
+model5 <- npreg(housetrain$Median_house_value ~ housetrain$Median_household_income
+                                                + housetrain$Mean_household_income,
+                                                  bws = bws5,
+                                                  residuals = TRUE)
+model6 <- npreg(housetrain$Median_house_value ~ housetrain$Median_household_income
+                                                + housetrain$Mean_household_income
+                                                + housetrain$Latitude
+                                                + housetrain$Longitude,
+                                                  bws = bws6,
+                                                  residuals = TRUE)
+summary(model5)
+summary(model6)
+
+```
+
+
+
+```{r}
+plot(fitted(model5), residuals(model5), pch=".")
+plot(fitted(model6), residuals(model6), pch=".")
+
+plot(housetrain$Median_household_income, residuals(model5), pch = '.')
+plot(housetrain$Mean_household_income, residuals(model5), pch = '.')
+
+plot(housetrain$Median_household_income, residuals(model6), pch = '.')
+plot(housetrain$Mean_household_income, residuals(model6), pch = '.')
+plot(housetrain$Latitude, residuals(model5), pch = '.')
+plot(housetrain$Longitude, residuals(model5), pch = '.')
+
+```
+
+Model 6's residuals appear to violate the constant variance condition, while with model 5 we can see how latitude and longitude for the different places can have an impact on the residuals.
+
+b.)
+```{r}
+housetest <- read.csv("housetest.csv")
+pred_errors <- matrix(1:40, nrow = 4, byrow = TRUE)
+housedata <- rbind(housetrain, housetest)
+samp <- sample(rep(1:10, length.out = nrow(housedata)), replace = FALSE)
+
+for(k in 1:10){
+  testd <- housedata[samp == k, ]
+  traind <- housedata[!(samp == k), ]
+  n <- nrow(traind)
+  model3 <- lm(Median_house_value ~ Median_household_income +
+                                      Mean_household_income,
+                                      data = traind)
+  model4 <- lm(Median_house_value ~ Median_household_income +
+                                      Mean_household_income,
+                                      + Longitude + Latitude,
+                                      data = traind)
+  model5 <- npreg(Median_house_value ~ Median_household_income +
+                                      Mean_household_income,
+                                      data = traind, newdata = testd,
+                                      bws = apply(traind[, c(5,6)], 2, sd) / n^(0.2))
+  model6 <- npreg(Median_house_value ~ Median_household_income +
+                                      Mean_household_income + Latitude + Longitude,
+                                      data = traind, newdata = testd,
+                                      bws = apply(traind[, c(5,6,2,3)], 2, sd) / n^(0.2))
+  
+  pred_errors[1,k] <- mean((testd$Median_house_value - predict(model3,newdata=testd))^2)
+  pred_errors[2,k] <- mean((testd$Median_house_value - predict(model4,newdata=testd))^2)
+  pred_errors[3,k] <- mean((testd$Median_house_value - model5$mean)^2)
+  pred_errors[4,k] <- mean((testd$Median_house_value - model6$mean)^2)
+  
+}
+
+
+```
+
+```{r}
+pred_errors
+
+
+```
+c.)
+```{r}
+mean(pred_errors[1,])
+mean(pred_errors[2,])
+mean(pred_errors[3,])
+mean(pred_errors[4,])
+
+```
+model 6 has significantly lower prediciton errors
+
+3.)
+a.)
+
+```{r}
+bootstrap <- read.csv('parametric-bootstrap.csv')
+
+model7 <- lm(y ~ x, data = bootstrap)
+plot(model7)
+plot(bootstrap$x, bootstrap$y)
+abline(model7)
+
+```
+
+The normal plot, as well as the scatterplot with the fitted linear model show that the constant variance assumption is violated.
+
+```{r}
+
+predict(model7, newdata = data.frame(x=15), se.fit = TRUE)
+
+
+
+```
+Need constant variance and gaussian distribution assumption to be accurate here, which is not the case
+
+c.)
+
+```{r}
+summary(model7)
+
+
+```
+
+```{r}
+simulation <- function(){
+  b_0 <- 2.694
+  b_1 <- .5624
+  X <- bootstrap$x
+  Y <- b_0 + b_1*X + rnorm(length(X), 0, X^2 + 1)
+  return(data.frame(x=X, y = Y))
+}
+simulation()
+```
+
+```{r}
+result <- 1:1000
+
+for(i in 1:1000){
+  data <- simulation()
+  model <- lm(y ~ x, data=data)
+  result[i] = predict(model, newdata = data.frame(x=15))
+}
+m <- mean(result)
+m
+mean((result-m)^2)
+
+
+```
+
+The standard error here is actually greater for model 6, but significantly less than the prediction errors from models 3-5
+
+
+
+
